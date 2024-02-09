@@ -1,0 +1,33 @@
+{
+  "name": "wa-gpt",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.ts",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google/generative-ai": "^0.2.0",
+    "@open-wa/wa-automate": "^4.67.0",
+    "axios": "^1.6.7",
+    "btlnk-short-url": "^1.0.3",
+    "dot-env": "^0.0.1",
+    "dotenv": "^16.4.1",
+    "fb-video-downloader": "^1.0.3",
+    "file-type": "^19.0.0",
+    "form-data": "^4.0.0",
+    "fs": "^0.0.1-security",
+    "media-helper": "^3.0.0",
+    "nayan-media-downloader": "^2.0.2",
+    "node-fetch": "^3.3.2",
+    "perma": "^2.0.1",
+    "sharp": "^0.33.2",
+    "shortlnk": "^1.1.2",
+    "tiktok-scraper": "^1.4.36",
+    "util": "^0.12.5",
+    "video-url-link": "^0.1.5"
+  }
+}
