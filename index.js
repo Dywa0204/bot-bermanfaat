@@ -35,116 +35,124 @@ function start(client) {
             ? caption.slice(1).trim().split(/ +/).shift().toLowerCase()
             : body.slice(1).trim().split(/ +/).shift().toLowerCase();
 
-        if(body[0] === "#") {
-            switch(command) {
-                // GREETING
-                case 'start':
-                    await client.reply(from, "Halo ada yang bisa saya bantu? ☺️☺️", msgId, true);
-                    break;
-    
-                //MENU
-                case 'menu':
-                case 'help':
-                    await client.reply(from, textMenu(pushname), msgId, true);
-                    break;
-    
-                //DONASI
-                case 'donasi':
-                    await client.reply(from, textDonasi(), msgId, true);
-                    break;
-    
-                case 'report':
-                    const report = body.replace(/[\n\s]|#report/g, "");
-                    if(report != "") {
-                        await client.sendText(senderId, reportText(report))
-                        await client.reply(from, "Laporan anda sudah terkirim, terimakasih", msgId, true);
-                    }
-                    break;
-    
-                // DOWNLOAD VIDEO
-                case 'download':
-                    const url = body.replace(/[\n\s]|#download/g, "");
-                    
-                    if(is.Url(url)) {
-                        if(url.includes("facebook.com") || url.includes("fb.com") || url.includes("instagram.com") || url.includes("ig.com")) 
-                            fbDownloadHandler(url, from, client, msgId);
-                        else if(url.includes("tiktok.com"))
-                            tiktokDownloadHandler(url, from, client, msgId)
-                        else if(url.includes("twitter.com") || url.includes("tw.com") || url.includes("x.com"))
-                            twitterDownloadHandler(url, from, client, msgId)
-    
-                        // Youtube API request quota exceeded
-                        // else if(url.includes("youtube.com") || url.includes("yt.com") || url.includes("youtu.be"))
-                        //     youtubeDownloadHandler(url, from, client, msgId)
-                    } else {
-                        await client.sendText(from, "‼️ Tautan yang Anda kirimkan tidak sah!")
-                    }
-                    break;
-    
-                // GENERATE STICKER
-                case 'stiker': 
-                case 'sticker':
-                    const stickerReply = await client.sendText(from, "⌛ Oke tunggu sebentar...");
-                    await client.sendImageAsSticker(from, body);
-                    await client.editMessage(stickerReply, "✅ *Berhasil!!* ✅")
-                    break;
-    
-                // AI CHAT
-                default:
+        switch(command) {
+            // GREETING
+            case 'start':
+                await client.reply(from, "Halo ada yang bisa saya bantu? ☺️☺️", msgId, true);
+                break;
+
+            //MENU
+            case 'menu':
+            case 'help':
+                await client.reply(from, textMenu(pushname), msgId, true);
+                break;
+
+            //DONASI
+            case 'donasi':
+                await client.reply(from, textDonasi(), msgId, true);
+                break;
+
+            case 'report':
+                const report = body.replace(/[\n\s]|#report/g, "");
+                if(report != "") {
+                    await client.sendText(senderId, reportText(report))
+                    await client.reply(from, "Laporan anda sudah terkirim, terimakasih", msgId, true);
+                }
+                break;
+
+            case 'shortlink':
+                const lnk = body.replace(/[\n\s]|#shortlink/g, "");
+                if(lnk != "" && is.Url(lnk)) {
+                    const shortlink = await generateShortLink(lnk);
+                    await client.reply(from, "✅ *Berhasil!!* ✅\n\n* Tautan Anda : " + shortlink, msgId, true);
+                }
+                break;
+
+            // DOWNLOAD VIDEO
+            case 'download':
+                const url = body.replace(/[\n\s]|#download/g, "");
+                
+                if(is.Url(url)) {
+                    if(url.includes("facebook.com") || url.includes("fb.com") || url.includes("instagram.com") || url.includes("ig.com")) 
+                        fbDownloadHandler(url, from, client, msgId);
+                    else if(url.includes("tiktok.com"))
+                        tiktokDownloadHandler(url, from, client, msgId)
+                    else if(url.includes("twitter.com") || url.includes("tw.com") || url.includes("x.com"))
+                        twitterDownloadHandler(url, from, client, msgId)
+
+                    // Youtube API request quota exceeded
+                    // else if(url.includes("youtube.com") || url.includes("yt.com") || url.includes("youtu.be"))
+                    //     youtubeDownloadHandler(url, from, client, msgId)
+                } else {
+                    await client.sendText(from, "‼️ Tautan yang Anda kirimkan tidak sah!")
+                }
+                break;
+
+            // GENERATE STICKER
+            case 'stiker': 
+            case 'sticker':
+                const stickerReply = await client.sendText(from, "⌛ Oke tunggu sebentar...");
+                await client.sendImageAsSticker(from, body);
+                await client.editMessage(stickerReply, "✅ *Berhasil!!* ✅")
+                break;
+
+            // AI CHAT
+            default:
+                if(body[0] === "#") {
                     const prompt = type === 'image' ? caption.replace("#", "") : body.replace("#", "")
-                        const sended = await client.sendText(from, "⌛ Oke tunggu sebentar...");
-    
-                        switch(type) {
-                            // AI IMAGE + TEXT BASED (ERROR)
-                            case 'media': 
-                                imageAndTextBased(prompt, body, historyChat).then(async (result) => {
-                                    historyChat.push({
-                                        role: "user",
-                                        parts: [
-                                            {type: "text", content: prompt},
-                                            {type: 'image', content: body}
-                                        ]
-                                    })
-                                    historyChat.push({
-                                        role: "model",
-                                        parts: result
-                                    })
-                                    
-                                    result = result == "" 
-                                        ? "Maaf saya tidak dapat menemukan jawaban yang tepat" 
-                                        : result.replace(/\*\*/g, "*") 
-                                    await client.editMessage(sended, result)
-                                }).catch(async (error) => {
-                                    await client.editMessage(sended, error.response 
-                                        ? error.response.data 
-                                        : "‼️ Terjadi kesalahan internal server");
+                    const sended = await client.sendText(from, "⌛⌛⌛");
+
+                    switch(type) {
+                        // AI IMAGE + TEXT BASED (ERROR)
+                        case 'media': 
+                            imageAndTextBased(prompt, body, historyChat).then(async (result) => {
+                                historyChat.push({
+                                    role: "user",
+                                    parts: [
+                                        {type: "text", content: prompt},
+                                        {type: 'image', content: body}
+                                    ]
                                 })
-                                break;
-    
-                            // AI TEXT BASED
-                            case 'chat':
-                                textBased(prompt, historyChat).then(async (result) => {
-                                    historyChat.push({
-                                        role: "user",
-                                        parts: prompt
-                                    })
-                                    historyChat.push({
-                                        role: "model",
-                                        parts: result
-                                    })
-                                    
-                                    result = result == "" 
-                                        ? "Maaf saya tidak dapat menemukan jawaban yang tepat" 
-                                        : result.replace(/\*\*/g, "*")
-                                    await client.editMessage(sended, result)
-                                }).catch(async (error) => {
-                                    await client.editMessage(sended, error.response 
-                                        ? error.response.data 
-                                        : "‼️ Terjadi kesalahan internal server");
+                                historyChat.push({
+                                    role: "model",
+                                    parts: result
                                 })
-                                break;
-                        }
-            }
+                                
+                                result = result == "" 
+                                    ? "Maaf saya tidak dapat menemukan jawaban yang tepat" 
+                                    : result.replace(/\*\*/g, "*") 
+                                await client.editMessage(sended, result)
+                            }).catch(async (error) => {
+                                await client.editMessage(sended, error.response 
+                                    ? error.response.data 
+                                    : "‼️ Terjadi kesalahan internal server");
+                            })
+                            break;
+
+                        // AI TEXT BASED
+                        case 'chat':
+                            textBased(prompt, historyChat).then(async (result) => {
+                                historyChat.push({
+                                    role: "user",
+                                    parts: prompt
+                                })
+                                historyChat.push({
+                                    role: "model",
+                                    parts: result
+                                })
+                                
+                                result = result == "" 
+                                    ? "Maaf saya tidak dapat menemukan jawaban yang tepat" 
+                                    : result.replace(/\*\*/g, "*")
+                                await client.editMessage(sended, result)
+                            }).catch(async (error) => {
+                                await client.editMessage(sended, error.response 
+                                    ? error.response.data 
+                                    : "‼️ Terjadi kesalahan internal server");
+                            })
+                            break;
+                    }
+                }
         }
     })
 }

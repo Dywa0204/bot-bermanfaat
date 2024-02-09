@@ -26,11 +26,16 @@ Support : facebook, instagram, twitter, tiktok
 Untuk menggunakan fitur chat AI
 Contoh : #buatkan resep nasi goreng
 
-6️⃣ *#report* <pesan>
+6️⃣ *#shortlink <tautan>*
+Untuk memperpendek link
+Contoh : #shortlink https://www.facebook.com/blablabla
+* NB : Hanya tersedia tinyurl
+
+7️⃣ *#report* <pesan>
 Laporan bug/error dan kritik/saran
 Contoh : #report ada error nih gan
 
-7️⃣ *#donasi*
+8️⃣ *#donasi*
 Untuk menampilkan informasi donasi wkwk
 
 Beberapa fitur masih dalam proses pengembangan
