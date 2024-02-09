@@ -33,14 +33,18 @@
 ## Getting Started
 
 Tested on Ubuntu 22.04.1 LTS
+
 This project require NodeJS >= v12.
+
 You must have Google Chrome installed on your device
+
 ```bash
 > wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
 > sudo apt install ./google-chrome-stable_current_amd64.deb
 ```
 
 ### Install
+
 Clone this project
 
 ```bash
@@ -57,6 +61,7 @@ Install the dependencies:
 ```
 
 ### Usage
+
 1. run the Whatsapp bot
 
 ```bash
@@ -66,4 +71,5 @@ Install the dependencies:
 after running it you need to scan the qr
 
 ## Troubleshooting
+
 Make sure all the necessary dependencies are installed: https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md
