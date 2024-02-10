@@ -16,6 +16,7 @@
 |   ✅   | AI Chat                                  |
 |   ✅   | Create Sticker                           |
 |   ✅   | Social Media Post and Video Downloader   |
+|   ✅   | Short Link                               |
 
 ### Supported Social Media
 
@@ -51,7 +52,7 @@ Clone this project
 > git clone https://github.com/Dywa0204/bot-bermanfaat.git
 or
 > git clone git@github.com:Dywa0204/bot-bermanfaat.git //if you use ssh
-> cd imageToSticker
+> cd bot-bermanfaat
 ```
 
 Install the dependencies:
