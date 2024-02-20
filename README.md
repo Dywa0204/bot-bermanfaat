@@ -16,6 +16,7 @@
 |   ✅   | AI Chat                                  |
 |   ✅   | Create Sticker                           |
 |   ✅   | Social Media Post and Video Downloader   |
+|   ✅   | Short Link                               |
 
 ### Supported Social Media
 
