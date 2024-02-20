@@ -1,11 +1,19 @@
 const wa = require('@open-wa/wa-automate');
-const { textBased, imageAndTextBased } = require('./utils/ai');
-const { fbDownload, tiktokDownload, twitterDownload, ytDownload } = require('./utils/downloader')
-const { generateShortLink } = require('./utils/shortlink')
-const { is } = require('./utils/checker')
-const { textMenu, textDonasi, reportText } = require('./utils/text')
+const { textBased, imageAndTextBased, pdfAndTextBased } = require('./utils/ai');
+const { fbDownload, tiktokDownload, twitterDownload, ytDownload, spotifyDownload } = require('./utils/downloader');
+const { generateShortLink } = require('./utils/shortlink');
+const { is } = require('./utils/checker');
+const { textMenu, textDonasi, reportText } = require('./utils/text');
+const { genLog, errLog } = require('./utils/logging')
 
 let historyChat = [];
+
+var allowed = /(?:1602602275|62895411138785|120363240984577935|120363222364834089)/g;
+
+const errorMsg = [
+    "‼️ Terjadi kesalahan internal server",
+    "‼️ Pdf melebihi 25 halaman"
+]
 
 wa.create({
     sessionId: "WA_GPT",
@@ -16,144 +24,289 @@ wa.create({
     logConsole: false,
     popup: true,
     qrTimeout: 0,
+    useChrome: true,
     executablePath: "/opt/google/chrome/chrome",
     messagePreprocessor: "AUTO_DECRYPT"
 }).then(client => start(client));
 
 function start(client) {
-    client.onMessage(async message => {
-        const msgId = message.id;
-        const from = message.from;
-        const body = message.body;
-        const caption = message.caption;
-        const type = message.type;
-        const mimeType = message.mimeType;
-        const pushname = message.sender.pushname;
-        const senderId = message.sender.id;
-
-        const command = type === 'image' 
-            ? caption.slice(1).trim().split(/ +/).shift().toLowerCase()
-            : body.slice(1).trim().split(/ +/).shift().toLowerCase();
-
-        switch(command) {
-            // GREETING
-            case 'start':
-                await client.reply(from, "Halo ada yang bisa saya bantu? ☺️☺️", msgId, true);
-                break;
-
-            //MENU
-            case 'menu':
-            case 'help':
-                await client.reply(from, textMenu(pushname), msgId, true);
-                break;
-
-            //DONASI
-            case 'donasi':
-                await client.reply(from, textDonasi(), msgId, true);
-                break;
-
-            case 'report':
-                const report = body.replace(/[\n\s]|#report/g, "");
-                if(report != "") {
-                    await client.sendText(senderId, reportText(report))
-                    await client.reply(from, "Laporan anda sudah terkirim, terimakasih", msgId, true);
-                }
-                break;
-
-            case 'shortlink':
-                const lnk = body.replace(/[\n\s]|#shortlink/g, "");
-                if(lnk != "" && is.Url(lnk)) {
-                    const shortlink = await generateShortLink(lnk);
-                    await client.reply(from, "✅ *Berhasil!!* ✅\n\n* Tautan Anda : " + shortlink, msgId, true);
-                }
-                break;
-
-            // DOWNLOAD VIDEO
-            case 'download':
-                const url = body.replace(/[\n\s]|#download/g, "");
-                
-                if(is.Url(url)) {
-                    if(url.includes("facebook.com") || url.includes("fb.com") || url.includes("instagram.com") || url.includes("ig.com")) 
-                        fbDownloadHandler(url, from, client, msgId);
-                    else if(url.includes("tiktok.com"))
-                        tiktokDownloadHandler(url, from, client, msgId)
-                    else if(url.includes("twitter.com") || url.includes("tw.com") || url.includes("x.com"))
-                        twitterDownloadHandler(url, from, client, msgId)
-
-                    // Youtube API request quota exceeded
-                    // else if(url.includes("youtube.com") || url.includes("yt.com") || url.includes("youtu.be"))
-                    //     youtubeDownloadHandler(url, from, client, msgId)
-                } else {
-                    await client.sendText(from, "‼️ Tautan yang Anda kirimkan tidak sah!")
-                }
-                break;
-
-            // GENERATE STICKER
-            case 'stiker': 
-            case 'sticker':
-                const stickerReply = await client.sendText(from, "⌛ Oke tunggu sebentar...");
-                await client.sendImageAsSticker(from, body);
-                await client.editMessage(stickerReply, "✅ *Berhasil!!* ✅")
-                break;
-
-            // AI CHAT
-            default:
-                if(body[0] === "#") {
-                    const prompt = type === 'image' ? caption.replace("#", "") : body.replace("#", "")
-                    const sended = await client.sendText(from, "⌛⌛⌛");
-
-                    switch(type) {
-                        // AI IMAGE + TEXT BASED (ERROR)
-                        case 'media': 
-                            imageAndTextBased(prompt, body, historyChat).then(async (result) => {
-                                historyChat.push({
-                                    role: "user",
-                                    parts: [
-                                        {type: "text", content: prompt},
-                                        {type: 'image', content: body}
-                                    ]
-                                })
-                                historyChat.push({
-                                    role: "model",
-                                    parts: result
-                                })
-                                
-                                result = result == "" 
-                                    ? "Maaf saya tidak dapat menemukan jawaban yang tepat" 
-                                    : result.replace(/\*\*/g, "*") 
-                                await client.editMessage(sended, result)
-                            }).catch(async (error) => {
-                                await client.editMessage(sended, error.response 
-                                    ? error.response.data 
-                                    : "‼️ Terjadi kesalahan internal server");
-                            })
-                            break;
-
-                        // AI TEXT BASED
-                        case 'chat':
-                            textBased(prompt, historyChat).then(async (result) => {
-                                historyChat.push({
-                                    role: "user",
-                                    parts: prompt
-                                })
-                                historyChat.push({
-                                    role: "model",
-                                    parts: result
-                                })
-                                
-                                result = result == "" 
-                                    ? "Maaf saya tidak dapat menemukan jawaban yang tepat" 
-                                    : result.replace(/\*\*/g, "*")
-                                await client.editMessage(sended, result)
-                            }).catch(async (error) => {
-                                await client.editMessage(sended, error.response 
-                                    ? error.response.data 
-                                    : "‼️ Terjadi kesalahan internal server");
-                            })
-                            break;
+    try {
+        client.onMessage(async message => {
+            const msgId = message.id;
+            const from = message.from;
+            const body = message.body;
+            const caption = message.caption;
+            const type = message.type;
+            const mimeType = message.mimetype;
+            const pushname = message.sender.pushname;
+            const senderId = message.sender.id;
+            const quotedMsg = message.quotedMsg;
+            const chatId = message.chatId;
+    
+            const command = type === 'image' || type === 'video'
+                    ? (caption ?  caption.slice(1).trim().split(/ +/).shift().toLowerCase() : "")
+                    : body.slice(1).trim().split(/ +/).shift().toLowerCase();
+    
+            switch(command) {
+                // GREETING
+                case 'start':
+                    try {
+                        genLog("⏳ Is sending a greeting message...");
+                        await client.reply(from, "Halo ada yang bisa saya bantu? ☺️☺️", msgId, true);
+                        genLog("✅ Success\n")
+                    } catch (error) {
+                        errLog(`📌 Error : ${error}\n`)
+                        await client.sendText(from, errorMsg[0])
                     }
-                }
+                    break;
+    
+                // MENU
+                case 'menu':
+                case 'help':
+                    try {
+                        genLog("⏳ Is sending a menu message...");
+                        await client.reply(from, textMenu(pushname), msgId, true);
+                        genLog("✅ Success\n")
+                    } catch (error) {
+                        errLog(`📌 Error : ${error}\n`)
+                        await client.sendText(from, errorMsg[0])
+                    }
+                    break;
+    
+                // DONASI
+                case 'donasi':
+                    try {
+                        genLog("⏳ Is sending a donation message...");
+                        await client.reply(from, textDonasi(), msgId, true);
+                        genLog("✅ Success\n")
+                    } catch (error) {
+                        errLog(`📌 Error : ${error}\n`)
+                        await client.sendText(from, errorMsg[0])
+                    }
+                    break;
+    
+                // REPORT
+                case 'report':
+                    const report = body.replace(/[\n\s]|#report/g, "");
+                    if(report != "") {
+                        try {
+                            genLog("⏳ Is sending a report message...");
+                            await client.sendText(senderId, reportText(report))
+                            await client.reply(from, "Laporan anda sudah terkirim, terimakasih", msgId, true);
+                            genLog("✅ Success\n")
+                        } catch (error) {
+                            errLog(`📌 Error : ${error}\n`)
+                            await client.sendText(from, errorMsg[0])
+                        }
+                    }
+                    break;
+    
+                // SHORT LINK
+                case 'shortlink':
+                    const lnk = body.replace(/[\n\s]|#shortlink/g, "");
+                    if(lnk != "" && is.Url(lnk)) {
+                        try {
+                            genLog("⏳ Generating shortlink...");
+                            const shortlink = await generateShortLink(lnk);
+                            await client.reply(from, "✅ *Berhasil!!* ✅\n\nTautan Anda : " + shortlink, msgId, true);
+                            genLog("✅ Success\n")
+                        } catch (error) {
+                            errLog(`📌 Error : ${error}\n`)
+                            await client.sendText(from, errorMsg[0])
+                        }
+                    }
+                    break;
+    
+                // DOWNLOAD VIDEO
+                case 'download':
+                    try {
+                        const url = body.replace(/[\n\s]|#download/g, "");
+                        genLog("⏳ Checking video URL...");
+
+                        if(is.Url(url)) {
+                            if(url.includes("facebook.com") || url.includes("fb.com") || url.includes("instagram.com") || url.includes("ig.com")) 
+                                fbDownloadHandler(url, from, client, msgId);
+                            else if(url.includes("tiktok.com"))
+                                tiktokDownloadHandler(url, from, client, msgId)
+                            else if(url.includes("twitter.com") || url.includes("tw.com") || url.includes("x.com"))
+                                twitterDownloadHandler(url, from, client, msgId)
+                            else if(url.includes("youtube.com") || url.includes("yt.com") || url.includes("youtu.be"))
+                                youtubeDownloadHandler(url, from, client, msgId)
+                        } else {
+                            await client.sendText(from, "‼️ Tautan yang Anda kirimkan tidak sah!")
+                            errLog("📌 Error : invalid url \n")
+                        }
+                    } catch (error) {
+                        errLog(`📌 Error : ${error}\n`)
+                        await client.sendText(from, errorMsg[0])
+                    }
+                    break;
+    
+                // GENERATE STICKER
+                case 'stiker': 
+                case 'sticker':
+                    try {
+                        genLog("⏳ Creating sticker...");
+                        if(type === "image" || type === "video") 
+                            createSticker(type, client, from, body);
+                    } catch (error) {
+                        errLog(`📌 Error : ${error}\n`)
+                        await client.sendText(from, errorMsg[0])
+                    }
+                    break;
+
+                // GENERATE STICKER FROM REPLY CHAT 
+                case 'stikerit':
+                case 'stickerit':
+                    try {
+                        if(quotedMsg) {
+                            genLog("⏳ Creating sticker...");
+                            if(quotedMsg.type === "image" || quotedMsg.type === "video") {
+                                const stickerBody = await client.decryptMedia(quotedMsg.id);
+                                createSticker(quotedMsg.type, client, from, stickerBody);
+                            }
+                        }
+                    } catch (error) {
+                        errLog(`📌 Error : ${error}\n`)
+                        await client.sendText(from, errorMsg[0])
+                    }
+                    break;
+
+                //RESET AI CHAT HISTORY
+                case 'reset_ai':
+                    try {
+                        genLog("⏳ Is cleaning AI chat history");
+                        historyChat = [];
+                        await client.reply(from, "✅ *Berhasil membersihkan riwayat chat AI*", msgId, true)
+                    } catch (error) {
+                        errLog(`📌 Error : ${error}\n`)
+                        await client.sendText(from, errorMsg[0])
+                    }
+                    break;
+
+                // RESQUEST SPOTIFY SONG
+                case 'request':
+                    try {
+                        genLog("⏳ Checking audio URL...");
+                        const audioUrl = body.replace(/[\n\s]|#request/g, "");
+                    
+                        if(is.Url(audioUrl)) {
+                            if(audioUrl.includes("spotify.com")) 
+                                spotifyDownloadHandler(audioUrl, from, client, msgId);
+                        } else {
+                            await client.sendText(from, "‼️ Tautan yang Anda kirimkan tidak sah!")
+                            errLog("📌 Error : invalid url \n")
+                        }
+                    } catch (error) {
+                        errLog(`📌 Error : ${error}\n`)
+                        await client.sendText(from, errorMsg[0])
+                    }
+                    break;
+    
+                // AI CHAT
+                default:
+                    const cmd = type === "image" || type === "document" ? (caption ? caption[0] : "") : body[0];
+                    if(cmd === "#") {
+                        genLog("⏳ Checking prompt...");
+                        const prompt = type === 'image' || type === "document" ? caption.replace("#", "") : body.replace("#", "")
+                        const sended = await client.sendText(from, "⌛⌛⌛");
+    
+                        switch(type) {
+                            // AI IMAGE + TEXT BASED
+                            case 'image': 
+                                try {
+                                    imageAndTextBased(prompt, body, mimeType).then(async (result) => {
+                                        assignNewChatHistory(prompt, result);
+                                        await client.editMessage(sended, result)
+                                        genLog("✅ Success\n")
+                                    }).catch(async (error) => {
+                                        errLog(`📌 Error : ${error}\n`)
+                                        await client.editMessage(sended, error);
+                                    })
+                                } catch (error) {
+                                    errLog(`📌 Error : ${error}\n`)
+                                    await client.sendText(from, errorMsg[0])
+                                }
+                                break;
+
+                            // AI PDF + TEXT BASED
+                            case 'document':
+                                if(mimeType.includes("pdf")) {
+                                    if(message.pageCount > 25) {
+                                        await client.editMessage(sended, errorMsg[1]);
+                                    } else {
+                                        try {
+                                            pdfAndTextBased(prompt, body, message.pageCount).then(async (result) => {
+                                                assignNewChatHistory(prompt, result);
+                                                await client.editMessage(sended, result)
+                                                genLog("✅ Success\n")
+                                            }).catch(async (error) => {
+                                                errLog(`📌 Error : ${error}\n`)
+                                                await client.editMessage(sended, error);
+                                            })
+                                        } catch (error) {
+                                            errLog(`📌 Error : ${error}\n`)
+                                            await client.sendText(from, errorMsg[0])
+                                        }
+                                    }
+                                }
+                                break;
+    
+                            // AI TEXT BASED
+                            case 'chat':
+                                try {
+                                    textBased(prompt, historyChat).then(async (result) => {
+                                        assignNewChatHistory(prompt, result);
+                                        await client.editMessage(sended, result)
+                                        genLog("✅ Success\n")
+                                    }).catch(async (error) => {
+                                        errLog(`📌 Error : ${error}\n`)
+                                        await client.editMessage(sended, error);
+                                    })
+                                } catch (error) {
+                                    errLog(`📌 Error : ${error}\n`)
+                                    await client.sendText(from, errorMsg[0])
+                                }
+                                break;
+                        }
+                    }
+            }
+        })
+    } catch (error) {
+        errLog(`📌 Error : ${error}\n`)
+    }
+}
+
+async function createSticker(type, client, from, body) {
+    const stickerReply = await client.sendText(from, "⌛ Oke tunggu sebentar...");
+
+    try {
+        genLog("⏳ Sending sticker...");
+        switch(type) {
+            case 'image':
+                await client.sendImageAsSticker(from, body);
+                break;
+            case 'video':
+                await client.sendMp4AsSticker(from, body);
+                break;
         }
+        await client.editMessage(stickerReply, "✅ *Berhasil!!* ✅")
+        genLog("✅ Success\n")
+    } catch (error) {
+        errLog(`📌 Error : ${error}\n`)
+        await client.editMessage(stickerReply, (error.message.includes("STICKER_TOO_LARGE") ? "‼️ Ukuran media terlalu besar" : errorMsg[0]))
+    }
+}
+
+function assignNewChatHistory(user, model) {
+    historyChat.push({
+        role: "user",
+        parts: user
+    })
+    
+    historyChat.push({
+        role: "model",
+        parts: model
     })
 }
 
@@ -161,30 +314,18 @@ async function fbDownloadHandler(url, from, client, msgId) {
     const downloadReply = await client.sendText(from, "⌛ Oke tunggu sebentar...");
 
     fbDownload(url).then(async result => {
-        console.log(result)
-        if(result.status) {
-            let downloadResult = "✨ *Berikut tautan download Anda* ✨\n\n";
-            
-            const shortLinkPromises = result.data.map(async (item, index) => {
-                if(!item.shouldRender) {
-                    const shortlink = await generateShortLink(item.url);
-                    return `${(index + 1)}. ${item.resolution ? item.resolution : "Tautan"} : ${shortlink}`;
-                }
-            });
-            const shortLinks = await Promise.all(shortLinkPromises);
-            shortLinks.forEach(shortlink => {
-                if(shortlink) {
-                    downloadResult += `${shortlink}\n`;
-                }
-            });
-            
-            const thumbnail = await client.download(result.data[0].thumbnail);
-            await client.sendImage(from, thumbnail, "image.jpeg", downloadResult, msgId)
-            await client.editMessage(downloadReply, "✅ *Berhasil!!* ✅")
+        if(result === "success") {
+            genLog(`⏳ Sending content...`);
+            await client.sendImage(from, "./stream/video/cvideo.mp4", "image.mp4", "", msgId);
+            await client.editMessage(downloadReply, "✅ *Berhasil!!* ✅");
+            genLog("✅ Success\n")
+        } else {
+            await client.editMessage(downloadReply, result);
+            errLog(`📌 Error : ${result}\n`)
         }
-        else await client.editMessage(downloadReply, "‼️ Maaf saya tidak dapat menemukan video dari tautan yang Anda berikan")
     }).catch(async error => {
-        await client.editMessage(downloadReply, "‼️ Terjadi kesalahan internal server")
+        errLog(`📌 Error : ${error}\n`)
+        await client.editMessage(downloadReply, error)
     })
 }
 
@@ -192,44 +333,37 @@ async function tiktokDownloadHandler(url, from, client, msgId) {
     const downloadReply = await client.sendText(from, "⌛ Oke tunggu sebentar...");
 
     tiktokDownload(url).then(async result => {
-        console.log(result)
-        if(result.status) {
-            const shortlink = await generateShortLink(result.data.video);
-
-            let downloadResult = "✨ *Berikut tautan download Anda* ✨\n\n";
-            downloadResult += `*${result.data.title}*\n`
-            downloadResult += `Tautan : ${shortlink}`
-            
-            await client.reply(from, downloadResult, msgId, true);
-            await client.editMessage(downloadReply, "✅ *Berhasil!!* ✅")
+        if(result === "success") {
+            genLog(`⏳ Sending content...`);
+            await client.sendImage(from, "./stream/video/cvideo.mp4", "image.mp4", "", msgId);
+            await client.editMessage(downloadReply, "✅ *Berhasil!!* ✅");
+            genLog("✅ Success\n")
+        } else {
+            await client.editMessage(downloadReply, result);
+            errLog(`📌 Error : ${result}\n`)
         }
-        else await client.editMessage(downloadReply, "‼️ Maaf saya tidak dapat menemukan video dari tautan yang Anda berikan")
     }).catch(async error => {
-        await client.editMessage(downloadReply, "‼️ Terjadi kesalahan internal server")
+        errLog(`📌 Error : ${error}\n`)
+        await client.editMessage(downloadReply, error)
     })
 }
 
-// Youtube API request quota exceeded
 async function youtubeDownloadHandler(url, from, client, msgId) {
     const downloadReply = await client.sendText(from, "⌛ Oke tunggu sebentar...");
 
     ytDownload(url).then(async result => {
-        console.log(result)
-        if(result.status) {
-            const shortlink = await generateShortLink(result.data.video);
-
-            let downloadResult = "✨ *Berikut tautan download Anda* ✨\n\n";
-            downloadResult += `*${result.data.title}*\n`
-            downloadResult += `Author : ${result.data.author}`
-            downloadResult += `Tautan : ${shortlink}`
-            
-            const thumbnail = await client.download(result.data.picture);
-            await client.sendImage(from, thumbnail, "image.jpeg", downloadResult, msgId)
-            await client.editMessage(downloadReply, "✅ *Berhasil!!* ✅")
+        if(result === "success") {
+            genLog(`⏳ Sending content...`);
+            await client.sendImage(from, "./stream/video/cvideo.mp4", "image.mp4", "", msgId);
+            await client.editMessage(downloadReply, "✅ *Berhasil!!* ✅");
+            genLog("✅ Success\n")
+        } else {
+            await client.editMessage(downloadReply, result);
+            errLog(`📌 Error : ${result}\n`)
         }
-        else await client.editMessage(downloadReply, "‼️ Maaf saya tidak dapat menemukan video dari tautan yang Anda berikan")
     }).catch(async error => {
-        await client.editMessage(downloadReply, "‼️ Terjadi kesalahan internal server")
+        errLog(`📌 Error : ${error}\n`)
+        await client.editMessage(downloadReply, error)
     })
 }
 
@@ -237,21 +371,37 @@ async function twitterDownloadHandler(url, from, client, msgId) {
     const downloadReply = await client.sendText(from, "⌛ Oke tunggu sebentar...");
 
     twitterDownload(url).then(async result => {
-        console.log(result)
-        if(result.status) {
-            let shortlinkHD = "", shortlinkSD;
-            if(is.Url(result.data.HD)) shortlinkHD = await generateShortLink(result.data.HD);
-            if(is.Url(result.data.SD)) shortlinkSD = await generateShortLink(result.data.SD);
-
-            let downloadResult = "✨ *Berikut tautan download Anda* ✨\n\n";
-            if(is.Url(result.data.HD)) downloadResult += `1. HD : ${shortlinkHD}`
-            if(is.Url(result.data.SD)) downloadResult += `2. SD : ${shortlinkSD}`
-            
-            await client.reply(from, downloadResult, msgId, true);
-            await client.editMessage(downloadReply, "✅ *Berhasil!!* ✅")
+        if(result === "success") {
+            genLog(`⏳ Sending content...`);
+            await client.sendImage(from, "./stream/video/cvideo.mp4", "image.mp4", "", msgId);
+            await client.editMessage(downloadReply, "✅ *Berhasil!!* ✅");
+            genLog("✅ Success\n")
+        } else {
+            await client.editMessage(downloadReply, result);
+            errLog(`📌 Error : ${result}\n`)
         }
-        else await client.editMessage(downloadReply, "‼️ Maaf saya tidak dapat menemukan video dari tautan yang Anda berikan")
     }).catch(async error => {
-        await client.editMessage(downloadReply, "‼️ Terjadi kesalahan internal server")
+        errLog(`📌 Error : ${error}\n`)
+        await client.editMessage(downloadReply, error)
+    })
+}
+
+async function spotifyDownloadHandler(url, from, client, msgId) {
+    const downloadReply = await client.sendText(from, "⌛ Oke tunggu sebentar...");
+
+    spotifyDownload(url).then(async result => {
+        if(result.path[0].status === 'Success') {
+            genLog(`⏳ Sending content...`);
+            const infoText = `* Judul lagu : *${result.info.title}* \n* Artis : *${result.info.artist}* \n* Album : *${result.info.album}*`
+            await client.sendFile(from, result.path[0].filename, "music.mp3", "", null, false, true, false)
+            await client.editMessage(downloadReply, `✅ *Berhasil!!* ✅\n\n${infoText}`);
+            genLog("✅ Success\n")
+        } else {
+            await client.editMessage(downloadReply, result.path);
+            errLog(`📌 Error : ${result}\n`)
+        }
+    }).catch(async error => {
+        errLog(`📌 Error : ${error}\n`)
+        await client.editMessage(downloadReply, error)
     })
 }

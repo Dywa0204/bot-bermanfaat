@@ -12,30 +12,35 @@ Untuk memulai percakapan
 Untuk menampilkan daftar menu bot
 
 3️⃣ *#sticker* atau *#stiker*
-Untuk membuat stiker dari gambar yang telah dikirim
-Cara menggunakan : kirimkan sebuah gambar dan tulis di caption #stiker atau #sticker
+Untuk membuat stiker dari gambar, GIF, atau video yang telah dikirim
+Cara menggunakan : kirimkan sebuah gambar, GIF, atau video lalu tulis di caption #stiker atau #sticker
+* NB : GIF atau Video hanya akan diambil durasi selama 5 detik
 
-4️⃣ *#download* <tautan_postingan_atau_video>
-Untuk mendownload postingan atau video dari media sosial
+4️⃣ *#stickerit* atau *#stikerit*
+Untuk membuat stiker dari gambar, GIF, atau video dari pesan terdahulu
+Cara menggunakan : balas/reply pesan yang terdapat media (gambar, GIF, atau video)
+* NB : GIF atau Video hanya akan diambil durasi selama 5 detik
+
+5️⃣ *#download* \`tautan_video\`
+Untuk mendownload video dari media sosial
 Contoh : #download https://www.facebook.com/blablabla
-Support : facebook, instagram, twitter, tiktok
-* NB : untuk youtube masiih dalam proses pengembangan
+Support : youtube, facebook, instagram, twitter, tiktok
 * Bonus : BEBAS WATERMARK 😎
 
-5️⃣ *#* <perintah_ai_(prompt)>
-Untuk menggunakan fitur chat AI
-Contoh : #buatkan resep nasi goreng
+6️⃣ *#* \`perintah_ai_(prompt)\`
+Untuk menggunakan fitur chat AI (teks, gambar, dan PDF)
+Cara menggunakan : kirimkan teks, gambar, atau file PDF dengan perintah yang diawali dengan #
 
-6️⃣ *#shortlink <tautan>*
+7️⃣ *#shortlink* \`tautan>\`
 Untuk memperpendek link
 Contoh : #shortlink https://www.facebook.com/blablabla
 * NB : Hanya tersedia tinyurl
 
-7️⃣ *#report* <pesan>
+8️⃣ *#report* \`pesan\`
 Laporan bug/error dan kritik/saran
 Contoh : #report ada error nih gan
 
-8️⃣ *#donasi*
+9️⃣ *#donasi*
 Untuk menampilkan informasi donasi wkwk
 
 Beberapa fitur masih dalam proses pengembangan
