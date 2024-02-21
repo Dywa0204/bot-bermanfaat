@@ -13,10 +13,12 @@
 
 | Active |                Feature                   |
 |:------:|:----------------------------------------:|
-|   ✅   | AI Chat                                  |
-|   ✅   | Create Sticker                           |
-|   ✅   | Social Media Post and Video Downloader   |
+|   ✅   | AI Chat (Text, Image, PDF based)         |
+|   ✅   | Generate Sticker (Image, GIF, Video)     |
+|   ✅   | Social Media Video Downloader            |
 |   ✅   | Short Link                               |
+|   ✅   | Spotify Request                          |
+|   ⌛   | PDF Processing                           |
 
 ### Supported Social Media
 
@@ -25,7 +27,7 @@
 |   ✅   | Facebook     |
 |   ✅   | Instagram    |
 |   ✅   | Twitter (X)  |
-|   ❌   | YouTube      |
+|   ✅   | YouTube      |
 |   ✅   | Tiktok       |
 
  
