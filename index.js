@@ -2,9 +2,11 @@ const wa = require('@open-wa/wa-automate');
 const { textBased, imageAndTextBased, pdfAndTextBased } = require('./utils/ai');
 const { fbDownload, tiktokDownload, twitterDownload, ytDownload, spotifyDownload } = require('./utils/downloader');
 const { generateShortLink } = require('./utils/shortlink');
-const { is } = require('./utils/checker');
+const { is, generateToken } = require('./utils/utils');
 const { textMenu, textDonasi, reportText } = require('./utils/text');
-const { genLog, errLog } = require('./utils/logging')
+const { genLog, errLog, setSession } = require('./utils/logging')
+const moment = require('moment');
+const fs = require("fs");
 
 let historyChat = [];
 
@@ -30,6 +32,18 @@ wa.create({
 }).then(client => start(client));
 
 function start(client) {
+    const session = generateToken(16);
+    setSession(session);
+    const today = moment().format('DD-MM-YYYY');
+    const logDir = `log_${today}`
+    fs.mkdir(`./logs/${logDir}`, { recursive: true }, (err) => {
+        if (err) {
+            console.error("📌 Failed create log directory")
+            return;
+        }
+        console.log(`✅ Log directory created : ${logDir}`)
+    });
+
     try {
         client.onMessage(async message => {
             const msgId = message.id;
@@ -178,6 +192,7 @@ function start(client) {
                         genLog("⏳ Is cleaning AI chat history");
                         historyChat = [];
                         await client.reply(from, "✅ *Berhasil membersihkan riwayat chat AI*", msgId, true)
+                        genLog("✅ Success\n")
                     } catch (error) {
                         errLog(`📌 Error : ${error}\n`)
                         await client.sendText(from, errorMsg[0])
@@ -316,7 +331,7 @@ async function fbDownloadHandler(url, from, client, msgId) {
     fbDownload(url).then(async result => {
         if(result === "success") {
             genLog(`⏳ Sending content...`);
-            await client.sendImage(from, "./stream/video/cvideo.mp4", "image.mp4", "", msgId);
+            await client.sendImage(from, "./stream/video/cvideo.mp4", "video.mp4", "", msgId);
             await client.editMessage(downloadReply, "✅ *Berhasil!!* ✅");
             genLog("✅ Success\n")
         } else {
@@ -335,7 +350,7 @@ async function tiktokDownloadHandler(url, from, client, msgId) {
     tiktokDownload(url).then(async result => {
         if(result === "success") {
             genLog(`⏳ Sending content...`);
-            await client.sendImage(from, "./stream/video/cvideo.mp4", "image.mp4", "", msgId);
+            await client.sendImage(from, "./stream/video/cvideo.mp4", "video.mp4", "", msgId);
             await client.editMessage(downloadReply, "✅ *Berhasil!!* ✅");
             genLog("✅ Success\n")
         } else {
@@ -354,7 +369,7 @@ async function youtubeDownloadHandler(url, from, client, msgId) {
     ytDownload(url).then(async result => {
         if(result === "success") {
             genLog(`⏳ Sending content...`);
-            await client.sendImage(from, "./stream/video/cvideo.mp4", "image.mp4", "", msgId);
+            await client.sendImage(from, "./stream/video/cvideo.mp4", "video.mp4", "", msgId);
             await client.editMessage(downloadReply, "✅ *Berhasil!!* ✅");
             genLog("✅ Success\n")
         } else {
@@ -373,7 +388,7 @@ async function twitterDownloadHandler(url, from, client, msgId) {
     twitterDownload(url).then(async result => {
         if(result === "success") {
             genLog(`⏳ Sending content...`);
-            await client.sendImage(from, "./stream/video/cvideo.mp4", "image.mp4", "", msgId);
+            await client.sendImage(from, "./stream/video/cvideo.mp4", "video.mp4", "", msgId);
             await client.editMessage(downloadReply, "✅ *Berhasil!!* ✅");
             genLog("✅ Success\n")
         } else {
